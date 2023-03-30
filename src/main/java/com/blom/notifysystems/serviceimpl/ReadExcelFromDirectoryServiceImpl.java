@@ -1,10 +1,13 @@
 package com.blom.notifysystems.serviceimpl;
 
-import com.blom.notifysystems.runnables.WriteSthg;
+
+import com.blom.notifysystems.runnables.ExcelManagement;
+import com.blom.notifysystems.service.EmailService;
 import com.blom.notifysystems.service.ReadExcelFromDirectoryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
@@ -14,6 +17,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
+import java.io.IOException;
+
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import static java.lang.Thread.sleep;
 
@@ -24,8 +36,14 @@ public class ReadExcelFromDirectoryServiceImpl implements ReadExcelFromDirectory
    // List<ThreadPoolTaskScheduler> listTaskScheduler;
     ThreadPoolTaskScheduler taskScheduler;
 
+    @Autowired
+    Environment env;
 
-    private List<ScheduledFuture<?>> scheduledFuture = new ArrayList<>();
+    @Autowired
+    EmailService emailService;
+
+
+    private final List<ScheduledFuture<?>> scheduledFuture = new ArrayList<>();
     private static final Logger logger = LoggerFactory.getLogger(ReadExcelFromDirectoryServiceImpl.class);
     private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
@@ -34,36 +52,22 @@ public class ReadExcelFromDirectoryServiceImpl implements ReadExcelFromDirectory
         logger.info("Started");
 
         logger.info("scheduledFuture.size() = "+scheduledFuture.size());
-       // logger.info(listTaskScheduler.size()+"");
         if (scheduledFuture.size() == 0) {
-            //  for (ThreadPoolTaskScheduler threadPoolTaskScheduler : listTaskScheduler) {
-
-                for (int i =0;i<2;i++) {
+                for (int i =0;i<Integer.valueOf(env.getProperty("notifysystems.startreadexcelfromdirectoryservice.nbrofworkers"));i++) {
                     logger.info("fetna "+i);
                     if (i==0)
-                    scheduledFuture.add(taskScheduler.scheduleAtFixedRate(new WriteSthg(), Long.valueOf(2000)));
+                    scheduledFuture.add(taskScheduler.scheduleAtFixedRate(new ExcelManagement(emailService,env.getProperty("spring.mail.recipient"),env.getProperty("spring.mail.subject"),env.getProperty("notifysystems.excelmanagement.comparingcellinexcel"),env.getProperty("notifysystems.excelmanagement.minimumpercentagetonotify"),env.getProperty("notifysystems.excelmanagement.path")), Long.valueOf(env.getProperty("notifysystems.threadpooltaskscheduler.nbrofpools.fixedrate"))));
 
-                    if (i==1)
-                    scheduledFuture.add(taskScheduler.scheduleAtFixedRate(saySthg(), Long.valueOf(2000)));
                 }
 
-           // }
 
  }
-    //    threadPoolTaskScheduler.setPoolSize(10);
-     //   threadPoolTaskScheduler.setThreadNamePrefix("bob-pool-");
-    //    threadPoolTaskScheduler.scheduleAtFixedRate(writeSthg(),Long.valueOf(2000));
-   //     ScheduledTaskRegistrar scheduledTaskRegistrar = new ScheduledTaskRegistrar() ;
-     //   scheduledTaskRegistrar.setTaskScheduler(threadPoolTaskScheduler);
+
+
     }
 
     @Override
     public void stopReadExcelFromDirectoryService() {
-     //   threadPoolTaskScheduler.destroy();
-     //   if (taskScheduler != null) {
-    //        taskScheduler.destroy();
-           // scheduledFuture.cancel(false);
-     //   }
 
         for (int i=scheduledFuture.size() - 1 ;i >= 0;i--){
          while (!scheduledFuture.get(i).isDone()) {
@@ -78,9 +82,4 @@ public class ReadExcelFromDirectoryServiceImpl implements ReadExcelFromDirectory
 
 
 
-
-
-    private Runnable saySthg() {
-        return () -> logger.info("Say {}", dateTimeFormatter.format(LocalDateTime.now()) );
-    }
 }

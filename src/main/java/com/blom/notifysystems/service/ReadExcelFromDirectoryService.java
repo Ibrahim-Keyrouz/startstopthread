@@ -2,10 +2,10 @@ package com.blom.notifysystems.service;
 
 public interface ReadExcelFromDirectoryService {
 
-    public void startReadExcelFromDirectoryService();
+    void startReadExcelFromDirectoryService();
 
 
 
-    public void stopReadExcelFromDirectoryService();
+    void stopReadExcelFromDirectoryService();
 
 }
